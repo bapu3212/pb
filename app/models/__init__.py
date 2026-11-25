@@ -1,6 +1,6 @@
 """Public model exports for the API."""
 
-from app.models.common import AccidentType, ExemptionCategory, Gender
+from app.models.common import AccidentType, ExemptionCategory, Gender, ReimbursementLevel
 from app.models.name_normalization import (
     CatalogMatchCandidate,
     CatalogMatchItem,
@@ -35,4 +35,5 @@ __all__ = [
     "LLMReviewPayload",
     "MedicalItem",
     "PrimaryDisease",
+    "ReimbursementLevel",
 ]

@@ -204,7 +204,9 @@ python -m unittest discover -v
 
 `POST /api/v1/catalog-matches`
 
-将票据、HIS 或收费清单中的商品名、简称、错别字、规格和收费名称清洗为标准药品通用名、医疗服务项目名称或医用耗材名称。医保三目录固定指：医保药品目录 + 医疗服务项目目录 + 医用耗材目录。
+将票据、HIS 或收费清单中的商品名、简称、错别字、规格和收费名称清洗为标准药品通用名、医疗服务项目名称或医用耗材名称，并按适用地区医保目录输出报销等级和报销比例。医保三目录固定指：医保药品目录 + 医疗服务项目目录 + 医用耗材目录。
+
+地区目录优先级：提供 `city` 时优先按城市医保目录；未提供 `city` 时按 `province` 省级医保目录。
 
 输入字段：
 
@@ -212,6 +214,8 @@ python -m unittest discover -v
 | --- | --- | --- | --- |
 | `items` | `array` | 否 | 待归一项目，与 `raw_bill_text` 至少提供一项 |
 | `raw_bill_text` | `string` | 否 | 原始票据文本，与 `items` 至少提供一项 |
+| `province` | `string` | 条件必填 | 医保目录所在省份，与 `city` 至少提供一个 |
+| `city` | `string` | 条件必填 | 医保目录所在城市，提供时优先按城市目录，否则按省份目录 |
 | `additional_context` | `string` | 否 | 采集来源、常见缩写、地区约定等 |
 
 `items` 每项字段：
@@ -249,6 +253,8 @@ python -m unittest discover -v
     }
   ],
   "raw_bill_text": "西力欣 0.75g 针；拜新同控释片 30mg；红外线治疗 5次；一次性无菌注射器 5ml。",
+  "province": "广东省",
+  "city": "深圳市",
   "additional_context": "名称来自收费系统和纸质票据，存在商品名、缩写和错别字。"
 }
 ```
@@ -264,7 +270,9 @@ python -m unittest discover -v
 | `matches[].raw_name` | 原样返回的原始名称 |
 | `matches[].standard_name` | 标准通用名或项目名称，无法确认时为空字符串 |
 | `matches[].confidence` | 匹配可信度，范围 `0-1` |
-| `matches[].basis` | 清洗和归一依据 |
+| `matches[].reimbursement_level` | 报销等级：`甲`、`乙`、`丙` |
+| `matches[].reimbursement_ratio` | 报销比例，范围 `0-1` |
+| `matches[].basis` | 清洗、归一、适用地区医保目录和报销判断依据 |
 | `matches[].alternatives` | 最多 3 个候选名称及依据 |
 
 返回示例：
@@ -277,14 +285,18 @@ python -m unittest discover -v
       "raw_name": "西力欣 0.75g 针",
       "standard_name": "注射用头孢呋辛钠",
       "confidence": 0.96,
-      "basis": "西力欣为头孢呋辛钠商品名，已去除规格和剂型描述",
+      "reimbursement_level": "乙",
+      "reimbursement_ratio": 0.9,
+      "basis": "西力欣为头孢呋辛钠商品名，已去除规格和剂型描述；按深圳市医保目录归为乙类",
       "alternatives": []
     },
     {
       "raw_name": "红外线治疗",
       "standard_name": "红外线治疗",
       "confidence": 0.93,
-      "basis": "原始名称与标准诊疗项目名称一致",
+      "reimbursement_level": "丙",
+      "reimbursement_ratio": 0.0,
+      "basis": "原始名称与标准诊疗项目名称一致；按深圳市医疗服务项目目录归为丙类",
       "alternatives": []
     }
   ]

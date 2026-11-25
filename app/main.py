@@ -35,7 +35,8 @@ app = FastAPI(
     title="医疗清单智能审核 API",
     version="0.2.0",
     description=(
-        "提供医疗清单智能审核，以及医疗费用明细的批量名称清洗和标准名称归一接口。"
+        "提供医疗清单智能审核，以及医疗费用明细的批量名称清洗、标准名称归一、"
+        "医保报销等级和报销比例判断接口。"
         "两个接口均通过百炼 qwen3.8-flash 一次生成结构化结果。"
     ),
 )
@@ -95,7 +96,7 @@ async def create_claim_review(payload: ClaimReviewRequest) -> ClaimReviewRespons
     "/api/v1/catalog-matches",
     response_model=CatalogMatchResponse,
     tags=["name-normalization"],
-    summary="标准化医疗项目名称",
+    summary="标准化医疗项目名称并判断医保报销等级",
 )
 async def create_catalog_match(payload: CatalogMatchRequest) -> CatalogMatchResponse:
     request_id = uuid.uuid4().hex

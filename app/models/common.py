@@ -16,6 +16,12 @@ class Gender(str, Enum):
     UNKNOWN = "未知"
 
 
+class ReimbursementLevel(str, Enum):
+    CLASS_A = "甲"
+    CLASS_B = "乙"
+    CLASS_C = "丙"
+
+
 class ExemptionCategory(str, Enum):
     MENTAL_BEHAVIORAL = "精神和行为障碍"
     CONGENITAL_CHROMOSOMAL = "先天性畸形、变形和染色体异常"

@@ -31,7 +31,18 @@ class ClaimReviewApiTests(TestCase):
         response = self.client.get("/openapi.json")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("/api/v1/catalog-matches", response.json()["paths"])
+        openapi = response.json()
+        self.assertIn("/api/v1/catalog-matches", openapi["paths"])
+        request_properties = openapi["components"]["schemas"][
+            "CatalogMatchRequest"
+        ]["properties"]
+        self.assertIn("province", request_properties)
+        self.assertIn("city", request_properties)
+        item_properties = openapi["components"]["schemas"]["CatalogMatchItem"][
+            "properties"
+        ]
+        self.assertIn("reimbursement_level", item_properties)
+        self.assertIn("reimbursement_ratio", item_properties)
 
     def test_claim_review_with_mocked_model(self) -> None:
         model_result = LLMReviewPayload.model_validate(
@@ -119,6 +130,8 @@ class ClaimReviewApiTests(TestCase):
                         "raw_name": "西力欣 0.75g 针",
                         "standard_name": "注射用头孢呋辛钠",
                         "confidence": 0.96,
+                        "reimbursement_level": "乙",
+                        "reimbursement_ratio": 0.9,
                         "basis": "西力欣为头孢呋辛钠商品名，已去除规格和剂型描述",
                         "alternatives": [],
                     },
@@ -126,6 +139,8 @@ class ClaimReviewApiTests(TestCase):
                         "raw_name": "红外线治疗",
                         "standard_name": "红外线治疗",
                         "confidence": 0.93,
+                        "reimbursement_level": "丙",
+                        "reimbursement_ratio": 0.0,
                         "basis": "原始名称与标准诊疗项目名称一致",
                         "alternatives": [],
                     },
@@ -150,6 +165,8 @@ class ClaimReviewApiTests(TestCase):
                             "item_type": "诊疗项目",
                         },
                     ],
+                    "province": "广东省",
+                    "city": "深圳市",
                     "additional_context": "名称来自收费系统。",
                 },
             )
@@ -159,14 +176,32 @@ class ClaimReviewApiTests(TestCase):
         self.assertTrue(body["request_id"])
         self.assertEqual(len(body["matches"]), 2)
         self.assertEqual(body["matches"][0]["standard_name"], "注射用头孢呋辛钠")
+        self.assertEqual(body["matches"][0]["reimbursement_level"], "乙")
+        self.assertEqual(body["matches"][0]["reimbursement_ratio"], 0.9)
         for removed_field in ("catalog_type", "catalog_code", "match_status"):
             self.assertNotIn(removed_field, body["matches"][0])
+
+    def test_catalog_match_rejects_missing_region(self) -> None:
+        response = self.client.post(
+            "/api/v1/catalog-matches",
+            json={
+                "items": [
+                    {
+                        "raw_name": "西力欣 0.75g 针",
+                        "item_type": "药品",
+                    }
+                ]
+            },
+        )
+
+        self.assertEqual(response.status_code, 422)
 
     def test_catalog_match_rejects_empty_input(self) -> None:
         response = self.client.post(
             "/api/v1/catalog-matches",
             json={
                 "items": [],
+                "province": "广东省",
             },
         )
 
